@@ -49,11 +49,9 @@ int main(void) {
 
 
     while(1) {
-
     	//ApagoTimers();//apago timers para no molestar en lectura de DHT
     	lec_pin_DHT();
     	lectura=DHT_Mde();
-
     }
     return 0 ;
 }
