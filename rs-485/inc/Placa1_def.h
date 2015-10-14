@@ -8,7 +8,7 @@
 #ifndef PLACA1_DEF_H_
 #define PLACA1_DEF_H_
 
-#include "DHT.h"
+
 
 
 //puertos
@@ -22,17 +22,25 @@
 //salidas
 	#define		LEDXpresso	PORT0,22
 
+//uart
+	#define 	PIN_tx_rs485     PORT0,15
+	#define 	PIN_rx_rs485     PORT0,16
+
 //SENSOR:
 	#define		DHT_DATA	PORT2,10
+
 
 
 //Defines generales:
 	#define		OFF			0
 	#define		ON			1
+	#define 	MODO2     2
+	#define 	FUNCION1  1
 
 // dirección en FIODIR
 	#define 	ENTRADA			0
 	#define 	SALIDA			1
+
 
 
 	#define		__R					volatile const
@@ -45,7 +53,8 @@
 
 	void kitInic(void);
 	void InicGPIOs ( void );
-	void  InicTimers(void);
+	void InicTimers(void);
+	void InicUart1(void);
 
 
 #endif /* PLACA1_DEF_H_ */
