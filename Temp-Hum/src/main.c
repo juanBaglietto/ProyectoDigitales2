@@ -30,7 +30,7 @@ void TIMER2_IRQHandler(void)//cada 10 micro segundos
 	if (Chip_TIMER_MatchPending(LPC_TIMER2, 1)) {
 			Chip_TIMER_ClearMatch(LPC_TIMER2, 1);
 			AnalizarTimerM();
-			//Board_LED_Toggle(0);
+
 		}
 
 }
