@@ -5,6 +5,7 @@
  *      Author: Juani
  */
 
+
 #ifndef PLACA1_DEF_H_
 #define PLACA1_DEF_H_
 
@@ -36,6 +37,13 @@
 	#define		ON			1
 	#define 	MODO2     2
 	#define 	FUNCION1  1
+
+//buffer circulares para rs-485
+
+
+
+#define UART_SRB_SIZE 128	/* Send */
+#define UART_RRB_SIZE 32	/* Receive */
 
 // dirección en FIODIR
 	#define 	ENTRADA			0
