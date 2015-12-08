@@ -16,9 +16,13 @@
 
 #include "Placa1_def.h"
 
+xQueueHandle tx_uart;
 xQueueHandle rx_uart;
+
 xSemaphoreHandle Sem_env;
 xSemaphoreHandle Sem_rec;
+
+uint8_t en =0;
 
 STATIC RINGBUFF_T txring;
 STATIC RINGBUFF_T rxring;
@@ -44,8 +48,9 @@ void kitInic(void)
 }
 void InicGPIOs ( void )
 {
-	Chip_GPIO_SetDir(LPC_GPIO,LEDXpresso,SALIDA);
-	Chip_GPIO_WritePortBit(LPC_GPIO,LEDXpresso,1);
+	Chip_GPIO_SetDir(LPC_GPIO,PIN_TE_485,SALIDA);
+	Chip_GPIO_WritePortBit(LPC_GPIO,PIN_TE_485,0);
+	//Chip_GPIO_WritePortBit(LPC_GPIO,LEDXpresso,1);
 	Chip_GPIO_SetDir(LPC_GPIO,DHT_DATA,ENTRADA);
 }
 
@@ -66,8 +71,8 @@ void InicUart1(void){
 	Chip_GPIO_SetDir(LPC_GPIO,0,15,SALIDA);
 	Chip_GPIO_SetDir(LPC_GPIO,0,16,ENTRADA);
 
-	Chip_IOCON_PinMux(LPC_IOCON,0,15,MODO2,FUNCION1);
-	Chip_IOCON_PinMux(LPC_IOCON,0,16,MODO2,FUNCION1);
+	Chip_IOCON_PinMux(LPC_IOCON,0,15,MODO2,FUNC1);
+	Chip_IOCON_PinMux(LPC_IOCON,0,16,MODO2,FUNC1);
 
 	 RingBuffer_Init(&rxring, rxbuff, 1, UART_RRB_SIZE);
 	 RingBuffer_Init(&txring, txbuff, 1, UART_SRB_SIZE);
@@ -82,36 +87,59 @@ void InicUart1(void){
 	NVIC_EnableIRQ(UART1_IRQn);
 }
 
+static void Cargo_datos()
+{
+	unsigned char dato[]="Hola mundo";
+
+	while(1)
+	{
+		xQueueSendToBack(tx_uart,&dato,portMAX_DELAY);
+	}
+}
+
 static void Enviar_rs485 ()
 {
-	uint8_t envio=10;
+	unsigned char envio[]="11 hola mundo";
+
 
 		while(1)
 		{
-			//Tamanio_cola=uxQueueMessagesWaiting(xQueue1);
-			//if(uxQueueMessagesWaiting(xQueue1)>= 128)
-			//{
+//			while(xQueueReceive(tx_uart,&envio,0))
+//			{
+				if(en==0){
+					Chip_GPIO_WritePortBit(LPC_GPIO,PIN_TE_485,1);
+					en=1;
 
-				//while(xQueueReceive(rx_uart,&envio,0)){
-					xSemaphoreTake(Sem_env,0);
-					Chip_UART_SendRB(LPC_UART1, &txring, (const uint8_t *)&envio, 1);
-					xSemaphoreGive(Sem_env);
+					Chip_UART_SendRB(LPC_UART1, &txring, (const char *)&envio, sizeof(envio) - 1);
+					vTaskDelay(100/portTICK_RATE_MS);
+					Chip_GPIO_WritePortBit(LPC_GPIO,PIN_TE_485,0);
+					xSemaphoreGive(Sem_rec);
+				}
+//			}
 
-				//}
-			//}
 		}
 
 }
 
 static void Recibir_rs485()
 {
-	uint8_t recibo;
+	unsigned char  recibo[20];
+	uint8_t Cont_datos=0;
 
 		while (1)
 		{
-			xSemaphoreTake(Sem_env,0);
-			Chip_UART_ReadRB(LPC_UART1, &rxring, (const uint8_t *)&recibo,1);
-			xSemaphoreGive(Sem_env);
+			//xSemaphoreTake(Sem_rec,portMAX_DELAY);
+			Cont_datos=Chip_UART_ReadRB(LPC_UART1, &rxring,&recibo,20);
+			if(Cont_datos >= 2)
+			{
+				xQueueSendToBack(rx_uart,&recibo,0);
+				//en=0;
+			}
+//			else
+//			{
+//				xSemaphoreGive(Sem_rec);
+//			}
+
 		}
 }
 
@@ -125,11 +153,16 @@ void task_inic()
 					configMINIMAL_STACK_SIZE, NULL, 1,
 					(xTaskHandle *) NULL);
 
+	xTaskCreate(Cargo_datos, (signed char *) "cargos datos",
+						configMINIMAL_STACK_SIZE, NULL, 1,
+						(xTaskHandle *) NULL);
 
+	tx_uart=xQueueCreate(512, sizeof( uint16_t ));
 	rx_uart=xQueueCreate(512, sizeof( uint16_t ));
 
 	vSemaphoreCreateBinary(Sem_env);
 	vSemaphoreCreateBinary(Sem_rec);
+//	xSemaphoreTake(Sem_rec,0);
 }
 
 void main(void)
