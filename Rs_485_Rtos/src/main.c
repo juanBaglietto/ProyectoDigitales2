@@ -66,11 +66,12 @@ static void Cargo_datos(void * pvParameters)
 static void Enviar_rs485(void * pvParameters)
 {
 	uint16_t  envio[4];
+	uint8_t	cam=0;
 
 	envio[0]=master_id;
 	envio[1]=esclavo_2;
 	envio[2]=nievel_id ;
-	envio[3]=40;
+	envio[3]=90;
 
 		while(1)
 		{
@@ -85,6 +86,18 @@ static void Enviar_rs485(void * pvParameters)
 //					xQueueReceive(tx_uart,&(envio[1]),0);
 //					xQueueReceive(tx_uart,&(envio[2]),0);
 //					xQueueReceive(tx_uart,&(envio[3]),0);
+					if(cam==0)
+					{
+						envio[1]=esclavo_1;
+						envio[2]=rps_id;
+						cam=1;
+					}
+					else
+					{
+						envio[1]=esclavo_2;
+						envio[2]=nievel_id;
+						cam=0;
+					}
 
 					Chip_UART_SendRB(LPC_UART1, &txring, (const uint16_t *)&envio, sizeof(envio));
 					vTaskDelay(15/portTICK_RATE_MS);
@@ -121,7 +134,7 @@ static void Recibir_rs485(void * pvParameters)
 
 				if(recibo[0]== esclavo_1 && recibo[1]== master_id && recibo[2]== rps_id)
 				{
-					if(recibo[3]==40)
+					if(recibo[3]==90)
 					{
 						//xQueueSendToBack(rx_uart,&recibo[4],0);
 						xSemaphoreGive(Sem_env);
@@ -131,7 +144,7 @@ static void Recibir_rs485(void * pvParameters)
 				}
 				else if(recibo[0]== esclavo_2 && recibo[1]== master_id && recibo[2]== nievel_id)
 				{
-					if(recibo[3]==40)
+					if(recibo[3]==90)
 					{
 						//xQueueSendToBack(rx_uart,&recibo[4],0);
 						//xSemaphoreGive(Sem_env);
