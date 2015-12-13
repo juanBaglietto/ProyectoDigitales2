@@ -16,6 +16,8 @@
 
 #include "Placa1_def.h"
 
+
+
 xQueueHandle tx_uart;
 xQueueHandle rx_uart;
 
@@ -38,6 +40,140 @@ void UART1_IRQHandler(void)
 	Chip_UART_IRQRBHandler(LPC_UART1, &rxring, &txring);
 }
 
+
+
+
+static void Cargo_datos(void * pvParameters)
+{
+	uint8_t i;
+	uint16_t dato [4];
+
+	dato[0]=master_id;
+	dato[1]=esclavo_1;
+	dato[2]= rps_id;
+	dato[3]=40;
+
+	while(1)
+	{
+		for(i=0;i<5;i++)
+		{
+			xQueueSendToBack(tx_uart,&dato[i],portMAX_DELAY);
+		}
+
+	}
+}
+
+static void Enviar_rs485(void * pvParameters)
+{
+	uint16_t  envio[4];
+
+	envio[0]=master_id;
+	envio[1]=esclavo_2;
+	envio[2]=nievel_id ;
+	envio[3]=40;
+
+		while(1)
+		{
+
+		//	xSemaphoreTake(Sem_env,portMAX_DELAY);
+			if(en==0)
+			{
+					Chip_GPIO_WritePortBit(LPC_GPIO,PIN_TE_485,1);
+					en=1;
+					//copio los valores de la cola a enviar en la trama
+//					xQueueReceive(tx_uart,&(envio[0]),0);
+//					xQueueReceive(tx_uart,&(envio[1]),0);
+//					xQueueReceive(tx_uart,&(envio[2]),0);
+//					xQueueReceive(tx_uart,&(envio[3]),0);
+
+					Chip_UART_SendRB(LPC_UART1, &txring, (const uint16_t *)&envio, sizeof(envio));
+					vTaskDelay(15/portTICK_RATE_MS);
+					Chip_GPIO_WritePortBit(LPC_GPIO,PIN_TE_485,0);
+					xSemaphoreGive(Sem_rec);
+			}
+
+
+
+		}
+
+}
+
+static void Recibir_rs485(void * pvParameters)
+{
+	uint16_t recibo[5];
+	int Cont_datos;
+
+		while (1)
+		{
+
+			recibo[0]=0;
+			recibo[1]=0;
+			recibo[2]=0;
+			recibo[3]=0;
+			recibo[4]=0;
+			Cont_datos=0;
+
+			xSemaphoreTake(Sem_rec,portMAX_DELAY);
+			Cont_datos=Chip_UART_ReadRB(LPC_UART1, &rxring,&recibo,sizeof(recibo));
+
+			if(Cont_datos <=10 &&Cont_datos >=9)
+			{
+
+				if(recibo[0]== esclavo_1 && recibo[1]== master_id && recibo[2]== rps_id)
+				{
+					if(recibo[3]==40)
+					{
+						//xQueueSendToBack(rx_uart,&recibo[4],0);
+						xSemaphoreGive(Sem_env);
+						en=0;
+
+					}
+				}
+				else if(recibo[0]== esclavo_2 && recibo[1]== master_id && recibo[2]== nievel_id)
+				{
+					if(recibo[3]==40)
+					{
+						//xQueueSendToBack(rx_uart,&recibo[4],0);
+						//xSemaphoreGive(Sem_env);
+						en=0;
+					}
+				}
+				else
+				{
+					xSemaphoreGive(Sem_rec);
+				}
+
+			}
+			else
+			{
+				xSemaphoreGive(Sem_rec);
+			}
+
+		}
+}
+
+void task_inic()
+{
+	xTaskCreate(Enviar_rs485, (signed char *) "Envio datos rs-485 ",
+					configMINIMAL_STACK_SIZE, NULL, 1,
+					(xTaskHandle *) NULL);
+
+	xTaskCreate(Recibir_rs485, (signed char *) "Recibo datos rs-485 ",
+					configMINIMAL_STACK_SIZE, NULL, 1,
+					(xTaskHandle *) NULL);
+
+	xTaskCreate(Cargo_datos, (signed char *) "cargos datos",
+						configMINIMAL_STACK_SIZE, NULL, 1,
+						(xTaskHandle *) NULL);
+
+	tx_uart=xQueueCreate(512, sizeof( uint16_t ));
+	rx_uart=xQueueCreate(512, sizeof( uint16_t ));
+
+	vSemaphoreCreateBinary(Sem_env);
+	vSemaphoreCreateBinary(Sem_rec);
+	xSemaphoreTake(Sem_env,0);
+	xSemaphoreTake(Sem_rec,0);
+}
 
 void kitInic(void)
 {
@@ -85,84 +221,7 @@ void InicUart1(void){
 		/* preemption = 1, sub-priority = 1 */
 	NVIC_SetPriority(UART1_IRQn, 1);
 	NVIC_EnableIRQ(UART1_IRQn);
-}
 
-static void Cargo_datos()
-{
-	unsigned char dato[]="Hola mundo";
-
-	while(1)
-	{
-		xQueueSendToBack(tx_uart,&dato,portMAX_DELAY);
-	}
-}
-
-static void Enviar_rs485 ()
-{
-	unsigned char envio[]="11 hola mundo";
-
-
-		while(1)
-		{
-//			while(xQueueReceive(tx_uart,&envio,0))
-//			{
-				if(en==0){
-					Chip_GPIO_WritePortBit(LPC_GPIO,PIN_TE_485,1);
-					en=1;
-
-					Chip_UART_SendRB(LPC_UART1, &txring, (const char *)&envio, sizeof(envio) - 1);
-					vTaskDelay(100/portTICK_RATE_MS);
-					Chip_GPIO_WritePortBit(LPC_GPIO,PIN_TE_485,0);
-					xSemaphoreGive(Sem_rec);
-				}
-//			}
-
-		}
-
-}
-
-static void Recibir_rs485()
-{
-	unsigned char  recibo[20];
-	uint8_t Cont_datos=0;
-
-		while (1)
-		{
-			//xSemaphoreTake(Sem_rec,portMAX_DELAY);
-			Cont_datos=Chip_UART_ReadRB(LPC_UART1, &rxring,&recibo,20);
-			if(Cont_datos >= 2)
-			{
-				xQueueSendToBack(rx_uart,&recibo,0);
-				//en=0;
-			}
-//			else
-//			{
-//				xSemaphoreGive(Sem_rec);
-//			}
-
-		}
-}
-
-void task_inic()
-{
-	xTaskCreate(Enviar_rs485, (signed char *) "Envio datos rs-485 ",
-					configMINIMAL_STACK_SIZE, NULL, 1,
-					(xTaskHandle *) NULL);
-
-	xTaskCreate(Recibir_rs485, (signed char *) "Recibo datos rs-485 ",
-					configMINIMAL_STACK_SIZE, NULL, 1,
-					(xTaskHandle *) NULL);
-
-	xTaskCreate(Cargo_datos, (signed char *) "cargos datos",
-						configMINIMAL_STACK_SIZE, NULL, 1,
-						(xTaskHandle *) NULL);
-
-	tx_uart=xQueueCreate(512, sizeof( uint16_t ));
-	rx_uart=xQueueCreate(512, sizeof( uint16_t ));
-
-	vSemaphoreCreateBinary(Sem_env);
-	vSemaphoreCreateBinary(Sem_rec);
-//	xSemaphoreTake(Sem_rec,0);
 }
 
 void main(void)

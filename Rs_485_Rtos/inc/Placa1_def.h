@@ -32,7 +32,17 @@
 //SENSOR:
 	#define		DHT_DATA	PORT2,10
 
+// comunic rs-485
 
+#define master_id 		1769
+#define esclavo_1 		425
+#define rps_id 			13
+
+#define esclavo_2 		333
+#define nievel_id 		77
+
+
+#define trama 5
 
 //Defines generales:
 	#define		OFF			0
@@ -44,7 +54,7 @@
 
 
 
-#define UART_SRB_SIZE 128	/* Send */
+#define UART_SRB_SIZE 32	/* Send */
 #define UART_RRB_SIZE 32	/* Receive */
 
 // dirección en FIODIR

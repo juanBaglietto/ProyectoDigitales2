@@ -6,13 +6,11 @@
  */
 #include "DHT.h"
 
-extern uint8_t TmrRunM[];
-extern uint8_t EventosM;
-extern uint8_t Humestring[7];
-extern uint8_t Tempstring[8];
-extern uint8_t flagLeerMensajeNuevo;
-extern uint8_t DHT_isLOW;
-extern uint8_t DHT_isHIGH;
+
+uint8_t Humestring[7];
+uint8_t Tempstring[8];
+uint8_t flagLeerMensajeNuevo;
+
 
 
 //Funcion con maquina de estados
@@ -24,54 +22,58 @@ int DHT_Mde(void){
 	uint16_t checkmio=0;
 	uint16_t hume=0,temp=0,check;
 	uint16_t ent_temp,dec_temp,ent_hume,dec_hume; //partes enteras y partes decimales
+	uint32_t timerFreq;
 
+	volatile uint8_t EventosM;
+
+	static timerFreq = Chip_Clock_GetSystemClockRate();
 
 
 	switch(estado){
 		case 0:
 			DHT_SALIDA; //LO HAGO SALIDA
 			DHT_SETLOW;
-			TmrStartM(EVENTOM1,TM1);//ARRANCO TIMER QUE ESPERA 25ms
+			Chip_TIMER_SetMatch(LPC_TIMER3,1,timerFreq/40); //seteo el mach1 en 25ms
 			estado=1;
 			break;
 		case 1:
-			if(VencioESPERA25ms){
+			if(xSemaphoreTake(sem_mach1,portMAX_DELAY)){
  				Chip_GPIO_WritePortBit(LPC_GPIO,LEDXpresso,0);
-				DHT_SETHIGH; //PONGO UN UNO A LA SALIDA
-				TmrStartM(EVENTOM2,TM2);//ARRANCO TIMER QUE espera 30us
+ 				Chip_TIMER_SetMatch(LPC_TIMER3,1,timerFreq/33333);//seteo el mach 1 con 30us
 				estado=2;
 			}
 			break;
 		case 2:
-			if(VencioESPERA30us){
+			if(xSemaphoreTake(sem_mach1,portMAX_DELAY)){
 				DHT_ENTRADA;//LO HAGO ENTRADA
-				TmrStartM(EVENTOM3,TM3);//ARRANCO TIMER QUE espera 20us
+				Chip_TIMER_CaptureFallingEdgeEnabl(LPC_TIMER3,0);//HABILITO LA CAPTURA DEL FALNCO desndente
+
 				estado=3;
 			}
 			break;
 		case 3:
-			if(VencioESPERA20us){
-				TmrStartM(EVENTOM4,TM4);//ARRANCA MI TIMEOUT de 0,5s
+//			if(VencioESPERA20us){
+//				TmrStartM(EVENTOM4,TM4);//ARRANCA MI TIMEOUT de 0,5s
 				estado=4;
-			}
+//			}
 			break;
 		case 4:
 			//Primero espero un uno...
-			if(DHT_isHIGH)
+			if(xSemaphoreTake(sem_cap_desc,portMAX_DELAY))
 			{
 				estado=5;
-				TmrStopM(EVENTOM4);//paro el timer 0,5s
-				TmrStartM(EVENTOM4,TM4);//lo reinicio a 0,5s
+//				TmrStopM(EVENTOM4);//paro el timer 0,5s
+//				TmrStartM(EVENTOM4,TM4);//lo reinicio a 0,5s
 			}//termina el 0 de 80us
-			if(VENCIOTimeout)//sigo esperando o ya paso el tiempo?
-			{
-				estado=0;
-				flagLeerMensajeNuevo=0;//termino lectura
-				return 1; //DEVUELVO ERROR
-			}
+//			if(VENCIOTimeout)//sigo esperando o ya paso el tiempo?
+//			{
+//				estado=0;
+//				flagLeerMensajeNuevo=0;//termino lectura
+//				return 1; //DEVUELVO ERROR
+//			}
 			break;
 		case 5:
-			if(DHT_isLOW) //espero un 0
+			if(DHT_is == false) //espero un 0
 			{
 				estado=7; //tengo q ir esperar el 1
 				TmrStopM(EVENTOM4);//paro el timer 0,5s
@@ -85,7 +87,7 @@ int DHT_Mde(void){
 			}
 			break;
 		case 6:	//espera un 0
-			if(DHT_isLOW)
+			if(DHT_is == false)
 			{
 				estado=7;
 			}
@@ -97,7 +99,7 @@ int DHT_Mde(void){
 			}
 			break;
 		case 7: //espero un 1
-			if(DHT_isHIGH)
+			if(DHT_is == true)
 			{
 				estado=8;
 				TmrStartM(EVENTOM5,TM5);//ARRANCA TIMER QUE espera 40us
@@ -111,7 +113,7 @@ int DHT_Mde(void){
 			break;
 		case 8:
 			if(VencioESPERA40us){
-				if(DHT_isHIGH)
+				if(DHT_is == true)
 				{
 					byte[i]|=(uint8_t)0x01<<j;//pongo un uno en la posicion
 					estado=6; //espero q se haga cero
@@ -205,14 +207,4 @@ int DHT_Mde(void){
 	return 0; //lectura correcta por el momento
 }
 
-void lec_pin_DHT(void){
 
-	if(DHT_is==true){
-		DHT_isHIGH=1;
-		DHT_isLOW=0;
-		}
-	else if(DHT_is==false){
-		DHT_isHIGH=0;
-		DHT_isLOW=1;
-	}
-}

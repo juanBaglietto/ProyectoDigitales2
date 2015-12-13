@@ -38,11 +38,7 @@
 	#define 	VencioTimer485	 	(EventosM & (0x01<<5))
 	#define 	VencioTimeOUT485 	(EventosM & (0x01<<6))
 
-	void TmrStartM(uint16_t ev,uint32_t t);
-	void AnalizarTimerM(void);
-	void TmrStopM (uint8_t ev);
-	void ApagoTimers(void);
-	void ArrancoTimers(void);
+
 
 
 

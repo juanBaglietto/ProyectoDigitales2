@@ -18,12 +18,24 @@
 	#define		PORT3		3
 	#define		PORT4		4
 
+	#define 	MODO0		0
+	#define 	MODO1		1
+	#define 	MODO2		2
+	#define 	MODO3		3
+
+
+	#define 	FUNC0		0
+	#define 	FUNC1		1
+	#define 	FUNC2		2
+	#define 	FUNC3		3
+	#define 	FUNC3		4
+
 
 //salidas
 	#define		LEDXpresso	PORT0,22
 
 //SENSOR:
-	#define		DHT_DATA	PORT2,10
+	#define		DHT_DATA	PORT0,23
 
 
 //Defines generales:
@@ -38,10 +50,6 @@
 	#define		__R					volatile const
 	#define		__W					volatile
 	#define		__RW				volatile
-
-	typedef 	unsigned int 		uint32_t;
-	typedef 	unsigned short 		uint16_t;
-	typedef 	unsigned char 		uint8_t;
 
 	void kitInic(void);
 	void InicGPIOs ( void );
