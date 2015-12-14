@@ -50,11 +50,6 @@
  * Public types/enumerations/variables
  ****************************************************************************/
 
-xQueueHandle tx_uart;
-xQueueHandle rx_uart;
-
-xSemaphoreHandle Sem_env;
-xSemaphoreHandle Sem_rec;
 
 uint8_t en =0;
 
@@ -331,6 +326,8 @@ void task_inic()
 
 	tx_uart=xQueueCreate(512, sizeof( uint16_t ));
 	rx_uart=xQueueCreate(512, sizeof( uint16_t ));
+	bomba=xQueueCreate(20, sizeof( uint8_t ));
+	motor=xQueueCreate(20, sizeof( uint8_t ));
 
 	vSemaphoreCreateBinary(Sem_env);
 	vSemaphoreCreateBinary(Sem_rec);
@@ -408,19 +405,12 @@ void main(void)
 
 	/* Initialize board and chip */
 	SystemCoreClockUpdate();
-	//Board_Init();
-	/* Initializes GPIO */
-	// copia SystemCoreClockUpdate();
 
 	kitInic();
 	task_inic();
+
 	usb_init();
 
-
-
-	/* enable clocks and pinmux */
-
-
 	vTaskStartScheduler();
-	//while (1){}
+
 }

@@ -33,6 +33,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "usbd_rom_api.h"
+#include "Placa1_def.h"
 
 /*****************************************************************************
  * Private types/enumerations/variables
@@ -96,7 +97,15 @@ static ErrorCode_t HID_SetReport(USBD_HANDLE_T hHid, USB_SETUP_PACKET *pSetup, u
 /* HID Interrupt endpoint event handler. */
 static ErrorCode_t HID_Ep_Hdlr(USBD_HANDLE_T hUsb, void *data, uint32_t event)
 {
+	static uint8_t valor_rec=0;
+	static uint8_t estado=0;
+	 portBASE_TYPE posta;
+	 char nivel[4];
+	 uint8_t rpm;
+
+
 	USB_HID_CTRL_T *pHidCtrl = (USB_HID_CTRL_T *) data;
+
 
 	switch (event) {
 	case USB_EVT_IN:
@@ -106,16 +115,83 @@ static ErrorCode_t HID_Ep_Hdlr(USBD_HANDLE_T hUsb, void *data, uint32_t event)
 	case USB_EVT_OUT:
 		/* Read the new report received. */
 		USBD_API->hw->ReadEP(hUsb, pHidCtrl->epout_adr, loopback_report);
-		if(*loopback_report == 1)
+
+		valor_rec=(*loopback_report);
+
+
+
+		switch(estado)
 		{
-			Chip_GPIO_WritePortBit(LPC_GPIO,0,22,1);
+		case 0:
+			if(valor_rec==ID_MOTOR)
+			{
+				estado=2;
+			}
+			if(valor_rec==ID_NIVEL)
+			{
+				estado=1;
+			}
+			else if(valor_rec==ID_ACTUAL)
+			{
+				estado=3;
+			}
+			break;
+		case 1:
+			posta=pdFALSE;
+			xQueueSendToBackFromISR(bomba,&valor_rec,&posta);
+			xSemaphoreGive(Sem_env);
+			nivel[0]=2;
+			nivel[1]=4;
+			nivel[2]=6;
+			nivel[3]=8;
+			//rpm=9;
+			//USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, &nivel[0], 1);
+			//USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, &nivel[1], 1);
+			USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, &nivel, sizeof(nivel));
+			//USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, &nivel[3], 1);
+			//USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, &rpm, 1);
+			//USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, &valor_rec, 1);
+			//stado=0;
+			estado=0;
+			break;
+		case 2:
+			posta=pdFALSE;
+			xQueueSendToBackFromISR(motor,&valor_rec,&posta);
+		//	xSemaphoreGive(Sem_env);
+			//nivel=4;
+			rpm=9;
+			//USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, &nivel, 1);
+			USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, &rpm, 1);
+			USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, &valor_rec, 1);
+			estado=0;
+
+			break;
+		case 3:
+//			(*nivel)=4;
+//			(*rpm)=9;
+//			USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, nivel, 1);
+//			USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, rpm, 1);
+//			estado=0;
+			break;
+
+
 		}
-		if(*loopback_report == 0)
+
+		if(valor_rec==ID_MOTOR)
 		{
-			Chip_GPIO_WritePortBit(LPC_GPIO,0,22,0);
+
 		}
+
+		//if(*loopback_report == 1)
+//		{
+//			Chip_GPIO_WritePortBit(LPC_GPIO,0,22,1);
+//		}
+//		if(*loopback_report == 0)
+//		{
+//			Chip_GPIO_WritePortBit(LPC_GPIO,0,22,0);
+//		}
 		/* loopback the report received. */
-		USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, loopback_report, 1);
+		//USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, loopback_report, 1);
 
 
 		break;

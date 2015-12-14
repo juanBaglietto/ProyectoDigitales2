@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>Sensor_rtos</name>
+	<name>Sensor_rtos_match</name>
 	<comment></comment>
 	<projects>
 		<project>lpc_chip_175x_6x</project>

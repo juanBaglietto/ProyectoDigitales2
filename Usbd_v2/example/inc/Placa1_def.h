@@ -9,6 +9,9 @@
 #ifndef PLACA1_DEF_H_
 #define PLACA1_DEF_H_
 #include "chip.h"
+#include "FreeRTOS.h"
+#include "task.h"
+#include "semphr.h"
 
 
 
@@ -35,6 +38,9 @@
 //usb
 
 #define			PIN_CONT_USB PORT2,9
+#define 		ID_MOTOR	(uint8_t)1
+#define 		ID_NIVEL	(uint8_t)2
+#define 		ID_ACTUAL	(uint8_t)3
 
 // comunic rs-485
 
@@ -83,6 +89,15 @@
 	STATIC RINGBUFF_T txring;
 	STATIC RINGBUFF_T rxring;
 	static uint8_t rxbuff[UART_RRB_SIZE], txbuff[UART_SRB_SIZE];
+
+
+	xQueueHandle tx_uart;
+	xQueueHandle rx_uart;
+	xQueueHandle bomba;
+	xQueueHandle motor;
+
+	xSemaphoreHandle Sem_env;
+	xSemaphoreHandle Sem_rec;
 
 
 #endif /* PLACA1_DEF_H_ */

@@ -16,19 +16,16 @@
 	#define		PORT1		1
 	#define		PORT2		2
 	#define		PORT3		3
-	#define		PORT4		4
 
 	#define 	MODO0		0
 	#define 	MODO1		1
 	#define 	MODO2		2
 	#define 	MODO3		3
 
-
 	#define 	FUNC0		0
 	#define 	FUNC1		1
 	#define 	FUNC2		2
 	#define 	FUNC3		3
-	#define 	FUNC3		4
 
 
 //salidas

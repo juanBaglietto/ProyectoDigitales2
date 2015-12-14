@@ -23,7 +23,7 @@
 	#define		LEDXpresso	PORT0,22
 
 //SENSOR:
-	#define		DHT_DATA	PORT2,10
+	#define		DHT_DATA	PORT0,23
 
 
 //Defines generales:

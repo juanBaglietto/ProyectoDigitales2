@@ -19,6 +19,8 @@ void InicGPIOs ( void )
 {
 	Chip_GPIO_SetDir(LPC_GPIO,LEDXpresso,SALIDA);
 	Chip_GPIO_WritePortBit(LPC_GPIO,LEDXpresso,1);
+	Chip_GPIO_SetDir(LPC_GPIO,DHT_DATA,ENTRADA);
+
 }
 
 void InicTimers(void){

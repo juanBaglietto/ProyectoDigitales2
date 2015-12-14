@@ -9,7 +9,6 @@
 #define DHT_H_
 
 #include "Placa1_def.h"
-#include "TimersM.h"
 #include "chip.h"
 #include "FreeRTOS.h"
 #include "task.h"
@@ -25,8 +24,18 @@
 
 #define N_useg_match2 (1)
 
-xSemaphoreHandle sem_mach1;
-xSemaphoreHandle sem_cap_desc;
+xSemaphoreHandle sem_mach1_timer3;
+xSemaphoreHandle sem_mach0_timer3;
+xSemaphoreHandle sem_timeOUT;
+xSemaphoreHandle sem_cap_low_80us;
+xSemaphoreHandle sem_cap_high_80us;
+xSemaphoreHandle sem_cap_bit_start;
+xSemaphoreHandle sem_cap_valor;
+
+
+
+
+
 
 
 
