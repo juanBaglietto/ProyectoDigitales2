@@ -119,7 +119,8 @@ xSemaphoreHandle Sem_rec;
 
 //semaforos para el sensor
 xSemaphoreHandle sem_mach1_timer3;
-xSemaphoreHandle sem_timeOUT;
+
+
 
 
 

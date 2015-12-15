@@ -27,12 +27,6 @@ void TIMER3_IRQHandler(void) //cada 10 micro segundos
 
 }
 
-void TIMER2_IRQHandler(void) {
-	if (Chip_TIMER_MatchPending(LPC_TIMER2, 1)) {
-		Chip_TIMER_ClearMatch(LPC_TIMER2, 1);
-		xSemaphoreGive(sem_timeOUT);
-	}
-}
 
 static void Datos_motor()
 {
@@ -86,13 +80,16 @@ static void Datos_bomba(void * pvParameters)
 
 static void Sensor() {
 
-	uint8_t fin_lec;
+	uint8_t fin_lec=0;
 
 	while (1) {
-//		if (fin_lec == 1) {
-//			vTaskDelay(10000 / portTICK_RATE_MS);
-//		}
-//		NVIC_DisableIRQ(USB_IRQn);
+		if (fin_lec==1)
+		{
+			//termino la lectura bien
+			vTaskDelay(5000 / portTICK_RATE_MS);//leo el sensor cada 5 segundos
+
+		}
+
 		fin_lec = DHT_Mde();
 	}
 
@@ -149,8 +146,6 @@ static void Recibir_rs485(void * pvParameters)
 
 					xQueueSendToBack(actual_rpm,&recibo[4],0);
 					xSemaphoreTake(Sem_env,0);
-
-
 				}
 			}
 			else if(recibo[0]== esclavo_2 && recibo[1]== master_id && recibo[2]== nievel_id)
@@ -176,6 +171,17 @@ static void Recibir_rs485(void * pvParameters)
 
 	}
 }
+//static void Encuesta()
+//{//Encuesto a los esclavos cada 5 segundos para mantener los valores actuales
+//
+//	while(1)
+//	{
+//
+//		vTaskDelay(5000 / portTICK_RATE_MS);
+//		xSemaphoreGive(Sem_env);
+//	}
+
+//}
 void InicUart1(void){
 
 
@@ -217,6 +223,8 @@ void task_inic()
 	xTaskCreate(Recibir_rs485, (signed char *) "Recibo datos rs-485 ",
 			configMINIMAL_STACK_SIZE, NULL, 1,
 			(xTaskHandle *) NULL);
+//	xTaskCreate(Encuesta, (signed char * ) "Encuesto a los esclavos ",
+//				configMINIMAL_STACK_SIZE, NULL, 1, (xTaskHandle *) NULL);
 
 	xTaskCreate(Datos_bomba, (signed char *) "cargos datos",
 			configMINIMAL_STACK_SIZE, NULL, 1,
@@ -236,14 +244,12 @@ void task_inic()
 	set_nivel=xQueueCreate(1, sizeof( uint16_t ));
 	actual_rpm=xQueueCreate(1, sizeof( uint16_t ));
 	actual_nivel=xQueueCreate(1, sizeof( uint16_t ));
-	actual_temp=xQueueCreate(1, sizeof( uint16_t ));
-	actual_hum=xQueueCreate(1, sizeof( uint16_t ));
+	actual_temp=xQueueCreate(1, sizeof( uint8_t )*4);
+	actual_hum=xQueueCreate(1, sizeof( uint16_t )*4);
 
 	//semaforos sensor
 	vSemaphoreCreateBinary(sem_mach1_timer3);
-	vSemaphoreCreateBinary(sem_timeOUT);
 	xSemaphoreTake(sem_mach1_timer3, 0);
-	xSemaphoreTake(sem_timeOUT, 0);
 
 	//semaforos 485
 	vSemaphoreCreateBinary(Sem_env);
