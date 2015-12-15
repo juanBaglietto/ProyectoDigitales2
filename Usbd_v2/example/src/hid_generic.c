@@ -97,11 +97,13 @@ static ErrorCode_t HID_SetReport(USBD_HANDLE_T hHid, USB_SETUP_PACKET *pSetup, u
 /* HID Interrupt endpoint event handler. */
 static ErrorCode_t HID_Ep_Hdlr(USBD_HANDLE_T hUsb, void *data, uint32_t event)
 {
-	static uint8_t valor_rec=0;
+	static uint8_t valor_rec_usb=0;
 	static uint8_t estado=0;
-	 portBASE_TYPE posta;
-	 char nivel[4];
-	 uint8_t rpm;
+	static uint16_t rpm_actual=0;
+	static uint16_t nivel_actual=0;
+	static uint16_t temp_actual=25;
+	static uint16_t hum_actual=56;
+
 
 
 	USB_HID_CTRL_T *pHidCtrl = (USB_HID_CTRL_T *) data;
@@ -116,85 +118,93 @@ static ErrorCode_t HID_Ep_Hdlr(USBD_HANDLE_T hUsb, void *data, uint32_t event)
 		/* Read the new report received. */
 		USBD_API->hw->ReadEP(hUsb, pHidCtrl->epout_adr, loopback_report);
 
-		valor_rec=(*loopback_report);
-
-
+		valor_rec_usb=*loopback_report;
 
 		switch(estado)
 		{
 		case 0:
-			if(valor_rec==ID_MOTOR)
+			if(valor_rec_usb==rps_id)
 			{
 				estado=2;
 			}
-			if(valor_rec==ID_NIVEL)
+			if(valor_rec_usb==nievel_id )
 			{
 				estado=1;
 			}
-			else if(valor_rec==ID_ACTUAL)
+			else if(valor_rec_usb==ID_ACTUAL_RPM)
 			{
 				estado=3;
 			}
+			else if(valor_rec_usb==ID_ACTUAL_NIVEL)
+			{
+				estado=4;
+			}
+			else if(valor_rec_usb==ID_ACTUAL_TEMP)
+			{
+				estado=5;
+			}
+			else if(valor_rec_usb==ID_ACTUAL_HUM)
+			{
+				estado=6;
+			}
+
 			break;
 		case 1:
-			posta=pdFALSE;
-			xQueueSendToBackFromISR(bomba,&valor_rec,&posta);
-			xSemaphoreGive(Sem_env);
-			nivel[0]=2;
-			nivel[1]=4;
-			nivel[2]=6;
-			nivel[3]=8;
-			//rpm=9;
-			//USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, &nivel[0], 1);
-			//USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, &nivel[1], 1);
-			USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, &nivel, sizeof(nivel));
-			//USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, &nivel[3], 1);
-			//USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, &rpm, 1);
-			//USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, &valor_rec, 1);
-			//stado=0;
+
+			xQueueSendToBack(bomba,&valor_rec_usb,0);
+
+			USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, loopback_report, sizeof(loopback_report));
+
 			estado=0;
 			break;
 		case 2:
-			posta=pdFALSE;
-			xQueueSendToBackFromISR(motor,&valor_rec,&posta);
-		//	xSemaphoreGive(Sem_env);
-			//nivel=4;
-			rpm=9;
-			//USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, &nivel, 1);
-			USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, &rpm, 1);
-			USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, &valor_rec, 1);
+
+			xQueueSendToBack(motor,&valor_rec_usb,0);
+			USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, loopback_report, sizeof(loopback_report));
+
 			estado=0;
 
 			break;
 		case 3:
-//			(*nivel)=4;
-//			(*rpm)=9;
-//			USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, nivel, 1);
-//			USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, rpm, 1);
-//			estado=0;
+
+			xQueueReceive(actual_rpm,&rpm_actual,0);
+			rpm_actual=30;
+			uint8_t go=30;
+			static uint8_t *val1;
+			val1=&go;
+
+			USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, val1, sizeof(val1));
+			estado=0;
+			break;
+		case 4:
+
+			xQueueReceive(actual_nivel,&nivel_actual,0);
+			nivel_actual=59;
+			uint8_t val2=2;
+			USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr,&val2 , sizeof(val2));
+			estado=0;
+			break;
+		case 5:
+
+			xQueueReceive(actual_temp,&temp_actual,0);
+			temp_actual=25;
+			uint8_t val3=3;
+			USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr,&val3 , sizeof(val3));
+			estado=0;
+			break;
+		case 6:
+
+			xQueueReceive(actual_hum,&hum_actual,0);
+			hum_actual=60;
+			uint8_t val4=4;
+			USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr,&val4 , sizeof(val4));
+			estado=0;
 			break;
 
 
 		}
 
-		if(valor_rec==ID_MOTOR)
-		{
 
-		}
-
-		//if(*loopback_report == 1)
-//		{
-//			Chip_GPIO_WritePortBit(LPC_GPIO,0,22,1);
-//		}
-//		if(*loopback_report == 0)
-//		{
-//			Chip_GPIO_WritePortBit(LPC_GPIO,0,22,0);
-//		}
-		/* loopback the report received. */
-		//USBD_API->hw->WriteEP(hUsb, pHidCtrl->epin_adr, loopback_report, 1);
-
-
-		break;
 	}
 	return LPC_OK;
 }
